@@ -1,0 +1,44 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Shepherd</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main class="popup">
+      <div class="brand">Shepherd</div>
+      <h1>Think before you prompt.</h1>
+
+      <label class="row toggle-row">
+        <span>Enabled</span>
+        <input id="enabled" type="checkbox" />
+      </label>
+
+      <label class="field">
+        <span>Mode</span>
+        <select id="mode">
+          <option value="intent">Intent</option>
+          <option value="explore">Explore</option>
+        </select>
+      </label>
+
+      <section class="stats">
+        <div class="stat">
+          <div class="stat-label">Intercepted</div>
+          <div id="promptsIntercepted" class="stat-value">0</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Edited</div>
+          <div id="promptsEditedAfterIntercept" class="stat-value">0</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Sent</div>
+          <div id="promptsSent" class="stat-value">0</div>
+        </div>
+      </section>
+    </main>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

@@ -1,0 +1,97 @@
+#shepherd-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
+  background: rgba(10, 10, 10, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+}
+
+#shepherd-modal {
+  width: min(420px, calc(100vw - 32px));
+  background: #111111;
+  color: #f4f4f4;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+}
+
+.shepherd-kicker {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #a1a1aa;
+  margin-bottom: 10px;
+}
+
+#shepherd-modal h2 {
+  margin: 0 0 8px;
+  font-size: 28px;
+  line-height: 1.1;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+#shepherd-modal p {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: #d4d4d8;
+}
+
+.shepherd-actions {
+  margin-top: 18px;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.shepherd-btn {
+  appearance: none;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    transform 120ms ease,
+    opacity 120ms ease,
+    background 120ms ease;
+}
+
+.shepherd-btn:hover {
+  transform: translateY(-1px);
+}
+
+.shepherd-btn:active {
+  transform: translateY(0);
+}
+
+.shepherd-btn-primary {
+  background: #f4f4f5;
+  color: #111111;
+}
+
+.shepherd-btn-secondary {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f4f4f5;
+}
+
+.shepherd-btn:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}
