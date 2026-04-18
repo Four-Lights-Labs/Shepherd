@@ -1,0 +1,3 @@
+Operator (LLM as tool, not synthentic human): https://chatgpt.com/g/g-G5diVh12v-chatprd-ai-for-product-managers/c/69e3f742-a9f0-83e8-ab6c-9056ef07e684
+
+Shepherd (Medium Unhooked / Momentum Dash / Cold Turkey Blocker for LLMs): https://chatgpt.com/g/g-G5diVh12v-chatprd-ai-for-product-managers/c/69e3b0f9-79f8-83e8-9298-be118b8bfb41
