@@ -9,13 +9,14 @@
   const SHEPHERD_OVERLAY_ID = "shepherd-overlay";
   const SESSION_KEY = "session";
   const METRICS_KEY = "metrics";
+  const EXPLORE_STYLE_ID = "shepherd-explore-style";
 
   // Toggle this to false once things are stable.
   const DEBUG = true;
 
   const DEFAULT_STATE = {
     enabled: true,
-    mode: "intent", // "intent" | "explore"
+    mode: "explore", // "explore" | "strict"
     session: {
       startedAt: null,
       firstPrompt: true,
@@ -28,8 +29,34 @@
     }
   };
 
+  const HIDE_SELECTORS = {
+    sidebar: [
+      "#stage-slideover-sidebar",
+      'aside[id^="snorlax"]',
+      'nav[aria-label*="Chat history"]',
+      'aside[aria-label*="Chat history"]',
+      'button[data-testid="close-sidebar-button"]'
+    ],
+    suggestions: [
+      'div[data-testid="system-hint-search"]',
+      'div[data-testid="system-hint-research"]',
+      'div[data-testid="system-hint-picture_v2"]',
+      'div[data-testid="composer-action-system-hint-button"]'
+    ],
+    discovery: [
+      'a[data-testid="explore-gpts-button"]',
+      'a[href*="/gpts"]',
+      'a[href*="explore"]'
+    ],
+    projects: [
+      '[data-testid*="project"]',
+      'a[href*="/projects"]'
+    ]
+  };
+
   let modalOpen = false;
   let bypassNextSend = false;
+  let exploreObserver = null;
 
   function log(...args) {
     if (DEBUG) console.log("[Shepherd]", ...args);
@@ -154,13 +181,11 @@
   }
 
   function getPromptInput() {
-    // Prefer the active element if it's editable.
     const active = document.activeElement;
     if (active && isEditableElement(active)) {
       return active;
     }
 
-    // ChatGPT composer variants.
     const selectors = [
       "#prompt-textarea",
       "textarea",
@@ -179,12 +204,10 @@
   function getPromptText(input) {
     if (!input) return "";
 
-    // Standard textarea/input path
     if ("value" in input && typeof input.value === "string") {
       if (input.value.trim()) return input.value;
     }
 
-    // Contenteditable path
     const innerText = input.innerText || "";
     if (innerText.trim()) return innerText;
 
@@ -283,6 +306,177 @@
     }
 
     return getPromptInput();
+  }
+
+  function disableSendButton() {
+    const btn = getSendButton();
+    if (!btn) {
+      warn("disableSendButton: no send button found");
+      return;
+    }
+
+    btn.dataset.shepherdDisabled = "true";
+    btn.disabled = true;
+    btn.style.pointerEvents = "none";
+
+    log("send button disabled", btn);
+  }
+
+  function enableSendButton() {
+    const btn = getSendButton();
+    if (!btn) {
+      warn("enableSendButton: no send button found");
+      return;
+    }
+
+    if (btn.dataset.shepherdDisabled === "true") {
+      btn.disabled = false;
+      btn.style.pointerEvents = "";
+      delete btn.dataset.shepherdDisabled;
+
+      log("send button re-enabled", btn);
+    }
+  }
+
+  function getAllExploreSelectors() {
+    return Object.values(HIDE_SELECTORS).flat();
+  }
+
+  function markHiddenByShepherd(el) {
+    if (!el) return;
+    if (el.dataset.shepherdExploreHidden === "true") return;
+
+    el.dataset.shepherdExploreHidden = "true";
+    el.dataset.shepherdPrevDisplay = el.style.display || "";
+    el.style.display = "none";
+  }
+
+  function unmarkHiddenByShepherd(el) {
+    if (!el) return;
+    if (el.dataset.shepherdExploreHidden !== "true") return;
+
+    el.style.display = el.dataset.shepherdPrevDisplay || "";
+    delete el.dataset.shepherdPrevDisplay;
+    delete el.dataset.shepherdExploreHidden;
+  }
+
+  function injectExploreStyles() {
+    if (document.getElementById(EXPLORE_STYLE_ID)) return;
+
+    const style = document.createElement("style");
+    style.id = EXPLORE_STYLE_ID;
+    style.textContent = `
+      body::before {
+        content: "Explore mode";
+        position: fixed;
+        top: 12px;
+        right: 16px;
+        z-index: 2147483646;
+        font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: rgba(255,255,255,0.5);
+        background: rgba(0,0,0,0.35);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 999px;
+        padding: 6px 10px;
+        pointer-events: none;
+        backdrop-filter: blur(8px);
+      }
+    `;
+    document.head.appendChild(style);
+    log("Explore mode styles injected");
+  }
+
+  function removeExploreStyles() {
+    const style = document.getElementById(EXPLORE_STYLE_ID);
+    if (style) {
+      style.remove();
+      log("Explore mode styles removed");
+    }
+  }
+
+  function hideExploreElements() {
+    const selectors = getAllExploreSelectors();
+
+    selectors.forEach((selector) => {
+      document.querySelectorAll(selector).forEach((el) => {
+        if (
+          el.matches?.("#prompt-textarea") ||
+          el.matches?.('button[data-testid="send-button"]')
+        ) {
+          return;
+        }
+
+        markHiddenByShepherd(el);
+      });
+    });
+  }
+
+  function restoreExploreElements() {
+    document.querySelectorAll('[data-shepherd-explore-hidden="true"]').forEach((el) => {
+      unmarkHiddenByShepherd(el);
+    });
+  }
+
+  function startExploreObserver() {
+    if (exploreObserver) return;
+
+    exploreObserver = new MutationObserver(() => {
+      hideExploreElements();
+    });
+
+    exploreObserver.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+
+    log("Explore mode observer started");
+  }
+
+  function stopExploreObserver() {
+    if (!exploreObserver) return;
+    exploreObserver.disconnect();
+    exploreObserver = null;
+    log("Explore mode observer stopped");
+  }
+
+  function applyExploreMode() {
+    log("Applying Explore mode");
+    removePromptGate();
+    enableSendButton();
+    hideExploreElements();
+    injectExploreStyles();
+    startExploreObserver();
+  }
+
+  function clearExploreMode() {
+    log("Clearing Explore mode");
+    stopExploreObserver();
+    removeExploreStyles();
+    restoreExploreElements();
+  }
+
+  async function syncModeUI() {
+    const state = await loadState();
+
+    if (!state.enabled) {
+      clearExploreMode();
+      removePromptGate();
+      enableSendButton();
+      log("syncModeUI complete", { enabled: false, mode: state.mode });
+      return;
+    }
+
+    if (state.mode === "explore") {
+      applyExploreMode();
+    } else {
+      clearExploreMode();
+    }
+
+    log("syncModeUI complete", { enabled: state.enabled, mode: state.mode });
   }
 
   function shouldInterrupt(promptText, session) {
@@ -466,6 +660,10 @@
 
     const state = await loadState();
 
+    if (state.mode !== "explore") {
+      clearExploreMode();
+    }
+
     log("current state", state);
     log("prompt details", {
       length: promptText.trim().length,
@@ -507,6 +705,8 @@
     event.stopPropagation();
     event.stopImmediatePropagation();
 
+    disableSendButton();
+
     log("defaultPrevented after", event.defaultPrevented);
     log("native send should now be blocked");
 
@@ -516,6 +716,7 @@
       onEdit: async () => {
         log("prompt gate action: Edit");
         removePromptGate();
+        enableSendButton();
         await recordEditAfterIntercept({ source });
         const freshInput = getPromptInput();
         setFocus(freshInput || input);
@@ -523,6 +724,7 @@
       onSendAnyway: async () => {
         log("prompt gate action: Send anyway");
         removePromptGate();
+        enableSendButton();
         await recordSend({ reason: "send_anyway", source });
         bypassNextSend = true;
         log("bypassNextSend set to true");
@@ -650,13 +852,15 @@
   function installDebugHelpers() {
     if (!DEBUG) return;
 
-    // Note: this is visible in the content-script execution context,
-    // not always the page's main JS world.
     window.ShepherdDebug = {
       getPromptInput,
       getSendButton,
       getAllButtonsSummary,
       removePromptGate,
+      applyExploreMode,
+      clearExploreMode,
+      disableSendButton,
+      enableSendButton,
       async getState() {
         return await loadState();
       },
@@ -722,6 +926,23 @@
     });
   }
 
+  function installStorageListener() {
+    chrome.storage.onChanged.addListener((changes, areaName) => {
+      if (areaName !== "local") return;
+
+      const modeChanged = Object.prototype.hasOwnProperty.call(changes, "mode");
+      const enabledChanged = Object.prototype.hasOwnProperty.call(changes, "enabled");
+
+      if (!modeChanged && !enabledChanged) return;
+
+      log("storage changed", { changes });
+
+      syncModeUI().catch((err) => {
+        error("syncModeUI failed after storage change:", err);
+      });
+    });
+  }
+
   async function init() {
     log("content script loaded", window.location.href);
 
@@ -733,6 +954,9 @@
 
     installDebugHelpers();
     installEventDiagnostics();
+    installStorageListener();
+
+    await syncModeUI();
 
     log("listeners attached");
   }
