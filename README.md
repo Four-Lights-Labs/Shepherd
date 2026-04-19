@@ -154,13 +154,13 @@ This is the single most important problem in the repo.
 - event tracing improvements
   
 ## 🧱 Tech Stack
-Manifest V3
-Vanilla JavaScript
-Chrome Extension APIs
-No backend
-No framework
+- Manifest V3
+- Vanilla JavaScript
+- Chrome Extension APIs
+- No backend
+- No framework
 
-This is intentional.
+This is intentional (at least, during the prototype phase).
 
 ## 📁 Structure
 ```
